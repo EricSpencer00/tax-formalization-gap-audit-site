@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tax Formalization Gap Audit</title>
+    <meta
+      name="description"
+      content="Model-checked U.S. Tax Code gap findings generated from TLA+ and TLC."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700;900&family=Noto+Serif:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="assets/site.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#content">Skip to content</a>
+    <header class="site-header">
+      <div class="container">
+        <p class="eyebrow">U.S. Tax Formalization</p>
+        <h1>Tax Semantics Gap Audit</h1>
+        <p class="subtitle">
+          A compact, government-style interface for the TLA+ gap report generated
+          with TLC model checks.
+        </p>
+        <div class="pills">
+          <span class="pill">Status: Public</span>
+          <span class="pill">Engine: SANY + TLC</span>
+          <span class="pill">Source: IRC Sections</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="container" id="content">
+      <aside class="side-panel" aria-label="Report metadata">
+        <section class="panel">
+          <h2>Document Snapshot</h2>
+          <p>
+            Total gap findings (h3 heading count):
+            <strong id="finding-count">—</strong>
+          </p>
+          <p>Report file:</p>
+          <a id="report-link" href="outputs/tax-formalization-exploration.md">
+            outputs/tax-formalization-exploration.md
+          </a>
+        </section>
+        <section class="panel">
+          <h2>Report Index</h2>
+          <div id="toc">Loading section links…</div>
+        </section>
+      </aside>
+      <section class="content-panel">
+        <div class="panel" id="report-box">
+          <h2>Findings Document</h2>
+          <article id="report-content" aria-live="polite">
+            <p>Loading markdown report…</p>
+          </article>
+          <p id="report-error" role="alert" hidden></p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        Built as a concise, public-facing view of a machine-checked tax gap audit.
+      </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+      const reportPath = "outputs/tax-formalization-exploration.md";
+      const contentNode = document.getElementById("report-content");
+      const tocNode = document.getElementById("toc");
+      const findingCountNode = document.getElementById("finding-count");
+      const errorNode = document.getElementById("report-error");
+      const reportLink = document.getElementById("report-link");
+
+      const slugify = (value) =>
+        value
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9\s-]/g, "")
+          .replace(/\s+/g, "-")
+          .replace(/-+/g, "-");
+
+      const renderToc = (headings) => {
+        if (!headings.length) {
+          tocNode.textContent = "No headings found.";
+          return;
+        }
+
+        const list = document.createElement("ol");
+        headings.forEach((heading) => {
+          const level = Number(heading.tagName.charAt(1));
+          const text = heading.textContent || "";
+          const item = document.createElement("li");
+          const link = document.createElement("a");
+
+          const id = heading.id || slugify(text) || `section-${Math.random()}`;
+          heading.id = id;
+          link.href = `#${id}`;
+          link.textContent = text;
+          item.style.marginLeft = `${Math.max(0, level - 2) * 0.9}rem`;
+          item.className = level === 3 ? "section-3" : "section-2";
+          item.appendChild(link);
+          list.appendChild(item);
+        });
+        tocNode.innerHTML = "";
+        tocNode.appendChild(list);
+      };
+
+      const annotateAndRender = (markdown) => {
+        const html = window.marked.parse(markdown);
+        contentNode.innerHTML = html;
+        const rendered = contentNode.querySelector("p");
+        const headings = contentNode.querySelectorAll("h2, h3");
+        renderToc(Array.from(headings));
+
+        const sectionHeadings = contentNode.querySelectorAll("h3");
+        findingCountNode.textContent = sectionHeadings.length.toLocaleString();
+        reportLink.textContent = reportPath;
+        reportLink.href = reportPath;
+      };
+
+      fetch(reportPath, { cache: "no-store" })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`Unable to load report (${response.status})`);
+          }
+          return response.text();
+        })
+        .then((text) => {
+          annotateAndRender(text);
+        })
+        .catch((err) => {
+          contentNode.innerHTML =
+            "<p>Unable to load the markdown source in this environment.</p>";
+          tocNode.textContent = "Unavailable.";
+          findingCountNode.textContent = "N/A";
+          errorNode.hidden = false;
+          errorNode.textContent = `Report load issue: ${err.message}`;
+          reportLink.removeAttribute("href");
+        });
+    </script>
+  </body>
+</html>
