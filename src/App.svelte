@@ -168,14 +168,6 @@
 </header>
 
 <main id="findings">
-  <section class="operator-note" aria-label="Operator note">
-    <strong>Bot loop retired.</strong>
-    <span>
-      This revision removes the autonomous DeepSeek planner from the public
-      workflow. New candidates below are editorial formalization targets, not
-      verified counterexamples until they are modeled and checked.
-    </span>
-  </section>
 
   <section class="search-band" aria-label="Finding controls">
     <label class="search-control">
