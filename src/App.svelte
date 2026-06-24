@@ -11,11 +11,46 @@
   let status = "loading";
   let error = "";
   let query = "";
+  let sortMode = "newest";
   let selectedId = "";
   let selectedMapId = taxCodeMap[0]?.id ?? "";
   let selectedPersonaId = biggestFindings[0]?.id ?? "";
   let lastLoaded = "";
   let autoRefresh = true;
+
+  const highestImpactFindingIds = [
+    "2",
+    "3",
+    "6",
+    "9",
+    "12",
+    "15",
+    "18",
+    "22",
+    "29",
+    "34",
+    "41",
+    "48",
+    "53",
+    "61",
+    "67",
+    "74",
+    "86",
+    "95",
+    "106",
+    "118",
+    "129",
+    "143",
+    "158",
+    "176",
+    "201",
+    "233",
+    "287",
+    "351",
+    "479",
+    "611",
+  ];
+  const highestImpactRank = new Map(highestImpactFindingIds.map((id, index) => [id, index]));
 
   marked.setOptions({
     gfm: true,
@@ -47,8 +82,31 @@
           invariant,
           observed,
         };
-      })
-      .reverse();
+      });
+  }
+
+  function sortFindings(list, mode) {
+    const sorted = [...list];
+
+    if (mode === "oldest") {
+      return sorted.sort((a, b) => a.number - b.number);
+    }
+
+    if (mode === "highest-impact") {
+      return sorted.sort((a, b) => {
+        const rankA = highestImpactRank.get(a.id);
+        const rankB = highestImpactRank.get(b.id);
+        const hasRankA = rankA !== undefined;
+        const hasRankB = rankB !== undefined;
+
+        if (hasRankA && hasRankB) return rankA - rankB;
+        if (hasRankA) return -1;
+        if (hasRankB) return 1;
+        return b.number - a.number;
+      });
+    }
+
+    return sorted.sort((a, b) => b.number - a.number);
   }
 
   async function loadReport() {
@@ -90,10 +148,11 @@
 
   $: findings = parseFindings(markdown);
   $: modelCount = (markdown.match(/^Model:/gm) ?? []).length;
-  $: filteredFindings = findings.filter((finding) => {
+  $: searchedFindings = findings.filter((finding) => {
     const haystack = `${finding.id} ${finding.title} ${finding.model}`.toLowerCase();
     return haystack.includes(query.trim().toLowerCase());
   });
+  $: filteredFindings = sortFindings(searchedFindings, sortMode);
   $: if (findings.length && !findings.some((finding) => finding.id === selectedId)) {
     selectedId = findings[0].id;
   }
@@ -106,7 +165,7 @@
   $: selectedPersona =
     biggestFindings.find((item) => item.id === selectedPersonaId) ?? biggestFindings[0];
   $: rendered = selected ? marked.parse(selected.block) : "";
-  $: latest = findings.slice(0, 4);
+  $: latest = [...findings].sort((a, b) => b.number - a.number).slice(0, 4);
   $: mappedActiveGaps = taxCodeMap.reduce(
     (total, item) => total + countCoverage(item.sections, findings),
     0,
@@ -179,11 +238,21 @@
         autocomplete="off"
       />
     </label>
+    <div class="finding-controls">
+      <label class="sort-control">
+        <span>Sort findings</span>
+        <select bind:value={sortMode}>
+          <option value="newest">Newest</option>
+          <option value="oldest">Oldest</option>
+          <option value="highest-impact">Highest impact</option>
+        </select>
+      </label>
 
-    <label class="refresh-toggle">
-      <input type="checkbox" bind:checked={autoRefresh} />
-      <span>Auto refresh</span>
-    </label>
+      <label class="refresh-toggle">
+        <input type="checkbox" bind:checked={autoRefresh} />
+        <span>Auto refresh</span>
+      </label>
+    </div>
   </section>
 
   {#if status === "error"}

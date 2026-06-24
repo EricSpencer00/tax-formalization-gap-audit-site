@@ -248,6 +248,7 @@ main {
 }
 
 .search-control span,
+.sort-control span,
 .refresh-toggle span {
   display: block;
   margin-bottom: 0.35rem;
@@ -265,6 +266,21 @@ main {
   padding: 0.95rem 1rem;
   font-size: 1.1rem;
   box-shadow: 8px 8px 0 var(--yellow);
+}
+
+.finding-controls {
+  display: flex;
+  align-items: end;
+  gap: 1rem;
+}
+
+.sort-control select {
+  border: 3px solid var(--line);
+  border-radius: 0;
+  background: var(--sheet);
+  padding: 0.95rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 800;
 }
 
 .refresh-toggle {
@@ -772,6 +788,7 @@ footer {
   }
 
   .search-band,
+  .finding-controls,
   .latest-strip,
   .persona-grid,
   .map-detail dl div {
