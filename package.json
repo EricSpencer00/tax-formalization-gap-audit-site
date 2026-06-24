@@ -1,0 +1,19 @@
+{
+  "name": "tax-formalization-gap-audit-site",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/sync-report.mjs && vite --host 0.0.0.0",
+    "sync-report": "node scripts/sync-report.mjs",
+    "build": "node scripts/sync-report.mjs && vite build",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "dependencies": {
+    "@sveltejs/vite-plugin-svelte": "^5.1.1",
+    "marked": "^15.0.7",
+    "svelte": "^5.37.0",
+    "vite": "^6.3.5"
+  },
+  "devDependencies": {}
+}

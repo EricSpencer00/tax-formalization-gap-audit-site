@@ -1,0 +1,9 @@
+outputs/continuation/
+outputs/tax-tla-sketch.md
+states/
+work/
+node_modules/
+dist/
+public/outputs/
+public/data/
+.vite/
