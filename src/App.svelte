@@ -165,7 +165,7 @@
   $: selectedPersona =
     biggestFindings.find((item) => item.id === selectedPersonaId) ?? biggestFindings[0];
   $: rendered = selected ? marked.parse(selected.block) : "";
-  $: latest = [...findings].sort((a, b) => b.number - a.number).slice(0, 4);
+  $: latest = sortFindings(findings, "newest").slice(0, 4);
   $: mappedActiveGaps = taxCodeMap.reduce(
     (total, item) => total + countCoverage(item.sections, findings),
     0,
