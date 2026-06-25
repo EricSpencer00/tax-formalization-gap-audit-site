@@ -5,10 +5,14 @@
 
   const base = import.meta.env.BASE_URL || "/";
   const reportPath = `${base}outputs/tax-formalization-exploration.md`;
+  const featuredPath = `${base}data/featured-formalizations.json`;
+  const botPlanPath = `${base}outputs/deepseek-bot/latest.json`;
   const sourcePath = "outputs/tax-formalization-exploration.md";
 
   let markdown = "";
+  let featured = null;
   let status = "loading";
+  let featuredStatus = "waiting";
   let error = "";
   let query = "";
   let sortMode = "newest";
@@ -17,6 +21,8 @@
   let selectedPersonaId = biggestFindings[0]?.id ?? "";
   let lastLoaded = "";
   let autoRefresh = true;
+  let botPlan = null;
+  let botStatus = "waiting";
 
   const highestImpactFindingIds = [
     "2",
@@ -109,6 +115,10 @@
     return sorted.sort((a, b) => b.number - a.number);
   }
 
+  function modelStem(value) {
+    return String(value || "").replace(/\.(tla|cfg)$/i, "");
+  }
+
   async function loadReport() {
     try {
       status = markdown ? "refreshing" : "loading";
@@ -133,6 +143,44 @@
     }
   }
 
+  async function loadFeatured() {
+    try {
+      const response = await fetch(featuredPath, {
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        featured = null;
+        featuredStatus = "waiting";
+        return;
+      }
+
+      featured = await response.json();
+      featuredStatus = "ready";
+    } catch {
+      featured = null;
+      featuredStatus = "waiting";
+    }
+  }
+
+  async function loadBotPlan() {
+    try {
+      const response = await fetch(botPlanPath, {
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        botStatus = "waiting";
+        return;
+      }
+
+      botPlan = await response.json();
+      botStatus = "ready";
+    } catch {
+      botStatus = "waiting";
+    }
+  }
+
   function sectionFamily(title) {
     if (/approval|consent|secretary/i.test(title)) return "Gate";
     if (/deadline|period|year|timing|annual/i.test(title)) return "Timing";
@@ -147,34 +195,44 @@
   }
 
   $: findings = parseFindings(markdown);
+  $: featuredModels = new Set((featured?.featured_stems ?? []).map(modelStem));
+  $: scopedFindings = featuredModels.size
+    ? findings.filter((finding) => featuredModels.has(modelStem(finding.model)))
+    : findings;
   $: modelCount = (markdown.match(/^Model:/gm) ?? []).length;
-  $: searchedFindings = findings.filter((finding) => {
+  $: filteredFindings = scopedFindings.filter((finding) => {
     const haystack = `${finding.id} ${finding.title} ${finding.model}`.toLowerCase();
     return haystack.includes(query.trim().toLowerCase());
   });
-  $: filteredFindings = sortFindings(searchedFindings, sortMode);
-  $: if (findings.length && !findings.some((finding) => finding.id === selectedId)) {
-    selectedId = findings[0].id;
+  $: if (scopedFindings.length && !scopedFindings.some((finding) => finding.id === selectedId)) {
+    selectedId = scopedFindings[0].id;
   }
   $: selected =
     filteredFindings.find((finding) => finding.id === selectedId) ??
     filteredFindings[0] ??
+    scopedFindings[0] ??
     findings[0];
   $: selectedMap =
     taxCodeMap.find((item) => item.id === selectedMapId) ?? taxCodeMap[0];
   $: selectedPersona =
     biggestFindings.find((item) => item.id === selectedPersonaId) ?? biggestFindings[0];
   $: rendered = selected ? marked.parse(selected.block) : "";
-  $: latest = sortFindings(findings, "newest").slice(0, 4);
+  $: latest = sortFindings(scopedFindings, "newest").slice(0, 4);
   $: mappedActiveGaps = taxCodeMap.reduce(
-    (total, item) => total + countCoverage(item.sections, findings),
+    (total, item) => total + countCoverage(item.sections, scopedFindings),
     0,
   );
 
   onMount(() => {
     loadReport();
+    loadFeatured();
+    loadBotPlan();
     const interval = window.setInterval(() => {
-      if (autoRefresh) loadReport();
+      if (autoRefresh) {
+        loadReport();
+        loadFeatured();
+        loadBotPlan();
+      }
     }, 120000);
     return () => window.clearInterval(interval);
   });
@@ -188,7 +246,7 @@
 
 <div class="usa-banner">
   <span class="flag-mark" aria-hidden="true"></span>
-  <span>Public research site for model-checked tax-code findings</span>
+  <span>Public research site for curated model-checked tax-code findings</span>
   <a href={sourcePath}>Source markdown</a>
 </div>
 
@@ -206,8 +264,9 @@
       <p class="kicker">U.S. Tax Formalization</p>
       <h1 id="page-title">Tax Code Gaps</h1>
       <p class="lede">
-        A formal audit of federal tax rules, mapped from raw counterexamples
-        into practical exposure zones.
+        Formal models, counterexample traces, and gap summaries from a running
+        TLA+ audit of federal tax rules. The public page defaults to the best
+        formalizations only.
       </p>
     </div>
 
@@ -216,11 +275,12 @@
         <span>Report state</span>
         <strong>{status === "ready" ? "Manual" : status}</strong>
       </div>
-      <div class="casefile-number">{findings.length.toLocaleString()}</div>
-      <div class="casefile-label">parsed findings</div>
+      <div class="casefile-number">{filteredFindings.length.toLocaleString()}</div>
+      <div class="casefile-label">featured findings</div>
       <div class="casefile-grid">
-        <span>{modelCount.toLocaleString()} models</span>
-        <span>{mappedActiveGaps.toLocaleString()} mapped hits</span>
+        <span>{modelCount.toLocaleString()} models in report</span>
+        <span>{featuredStatus === "ready" ? `${featuredModels.size.toLocaleString()} curated models` : "curated set loading"}</span>
+        <span>{lastLoaded || "loading"}</span>
       </div>
     </div>
   </section>
@@ -265,7 +325,7 @@
   <section class="report-grid">
     <aside class="finding-list" aria-label="Parsed findings">
       <div class="list-heading">
-        <span>Latest findings</span>
+        <span>Featured findings</span>
         <strong>{filteredFindings.length.toLocaleString()}</strong>
       </div>
 
@@ -429,9 +489,9 @@
       <h2>State machines first, prose second.</h2>
     </div>
     <p>
-      Each verified entry names the statute, a minimal model, the invariant
-      expected by the rule, and the counterexample state that violates it.
-      Candidate entries are kept visibly separate until checked.
+      Each entry names the statute, a minimal model, the invariant expected by
+      the rule, and the counterexample state that violates it. The full corpus
+      stays in the repository, but this view keeps the signal high.
     </p>
   </section>
 

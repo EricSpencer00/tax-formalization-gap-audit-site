@@ -1,0 +1,79 @@
+name: DeepSeek autonomous loop
+
+on:
+  workflow_dispatch:
+    inputs:
+      iterations:
+        description: Number of planner iterations
+        required: false
+        default: "5"
+  schedule:
+    - cron: "17 * * * *"
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  loop:
+    runs-on: ubuntu-latest
+    env:
+      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+      DEEPSEEK_MODEL: deepseek-chat
+      DEEPSEEK_ITERATIONS: ${{ github.event.inputs.iterations || '5' }}
+      CONTINUATION_OUTPUT_DIR: outputs/deepseek-bot/plans
+      CONTINUATION_MAX_TOKENS: "1024"
+      CONTINUATION_TEMPERATURE: "0.2"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Stop if DeepSeek secret is missing
+        run: |
+          if [ -z "$DEEPSEEK_API_KEY" ]; then
+            echo "DEEPSEEK_API_KEY secret is not configured."
+            exit 1
+          fi
+
+      - name: Run DeepSeek planner loop
+        run: |
+          mkdir -p outputs/deepseek-bot/plans
+          python3 scripts/autonomous-gap-loop.py \
+            --iterations "$DEEPSEEK_ITERATIONS" \
+            --provider deepseek \
+            --show-plan \
+            --log-file outputs/deepseek-bot/autonomous-loop.log.jsonl
+          cp outputs/deepseek-bot/plans/latest.json outputs/deepseek-bot/latest.json
+
+      - name: Commit DeepSeek output
+        run: |
+          ./scripts/push-to-main-safe.sh \
+            outputs/deepseek-bot \
+            outputs/loop-checkpoint.md \
+            outputs/featured-formalizations.json \
+            README.md
+
+      - name: Build site with latest bot state
+        run: |
+          npm ci
+          npm run build
+
+      - uses: actions/configure-pages@v4
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "description": "Curated TLA+ publish set that the public site surfaces by default.",
+  "focus_areas": [
+    "ownership versus reporting",
+    "withholding and credit reconciliation",
+    "dividend entitlement and cum-ex style reuse",
+    "partnership basis and disguised sale sequences",
+    "wash sale and constructive sale timing"
+  ],
+  "featured_stems": [
+    "work/TaxGapHunting",
+    "work/TaxTreatyGap",
+    "work/TaxWashSaleGap",
+    "work/TaxBackupWithholdingGap",
+    "work/TaxConstructiveSaleGap",
+    "work/TaxPartnershipGap",
+    "work/TaxTransferWithholdingGap",
+    "work/TaxTransferCreditGap",
+    "work/TaxPartnershipBasisGap",
+    "work/TaxIntermediaryDuplicationGap",
+    "work/TaxReportingFormGap",
+    "work/TaxCrossBorderCertGap",
+    "work/TaxDividendRecordDateGap",
+    "work/TaxDividendDoubleClaimGap",
+    "work/TaxStockLoanBeneficialOwnershipGap",
+    "work/TaxSyntheticDividendGap",
+    "work/TaxWithholdingCreditDuplicationGap",
+    "work/TaxCumExThreePartyGap"
+  ]
+}

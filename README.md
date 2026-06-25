@@ -31,8 +31,9 @@ Update it only when a model/check result is accepted.
 During `npm run build`, `scripts/sync-report.mjs` copies the current report into
 `public/outputs/`, and Vite publishes that copy into `dist/`.
 
-The website fetches the built markdown with `cache: "no-store"` and refreshes
-the page data every two minutes while the tab is open.
+The website fetches the built markdown with `cache: "no-store"`, applies the
+curated manifest from `outputs/featured-formalizations.json`, and refreshes the
+page data every two minutes while the tab is open.
 
 ## Local development
 
@@ -40,6 +41,45 @@ the page data every two minutes while the tab is open.
 npm ci
 npm run dev
 ```
+
+## Autonomous DeepSeek loop
+
+`.github/workflows/deepseek-loop.yml` runs every hour and can also be
+started manually from the Actions tab. It requires a repository secret named
+`DEEPSEEK_API_KEY`.
+
+Each run writes tracked bot state:
+
+- `outputs/deepseek-bot/latest.json`
+- `outputs/deepseek-bot/autonomous-loop.log.jsonl`
+- `outputs/loop-checkpoint.md`
+
+The workflow commits those files as `DeepSeek Loop Bot`, builds the Svelte site,
+and deploys GitHub Pages from the same workflow run.
+
+Each scheduled wake runs a five-step planner burst by default. The loop keeps a
+planning cursor from the report, latest bot state, and append-only bot log so it
+does not keep rediscovering the same next section. It also passes recent planned
+gap titles into each model turn so a burst does not spend every turn on the same
+statute pattern.
+
+The repo also publishes a smaller TLA+ surface area by default:
+
+- `outputs/featured-formalizations.json` defines the curated model set.
+- Only those `work/*.tla` and matching `work/*.cfg` files are staged for
+  publish.
+- The public site filters the report to that set, which keeps the displayed data
+  points focused on the strongest formalizations.
+
+## OpenClaw loop formalization
+
+The reusable product contract is captured in:
+
+- `outputs/openclaw-loop-formalization.md`
+- `outputs/openclaw-loop-contract.json`
+
+The current repo is `PlanOnlyBurst`; the OpenClaw target loop is
+`Plan -> Generate -> Verify -> Commit -> Publish -> Watch`.
 
 ## Deploy
 
